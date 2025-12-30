@@ -8,6 +8,7 @@ from pydantic import BaseModel, root_validator
 from bkflow_feel.api import parse_expression
 
 from bkflow_dmn.hit_policy import get_hit_policy
+from bkflow_dmn.audit import log_decision, is_auditing
 
 
 class HitPolicyEnum(str, Enum):
@@ -80,6 +81,21 @@ class SingleDecisionTable(BaseModel):
             )
         elif outputs_result:
             final_result.append({key: value for key, value in zip(self.outputs.col_ids, outputs_result)})
+        
+        # Log to audit trail if active
+        if is_auditing():
+            log_decision(
+                table_title=self.title,
+                facts=facts,
+                rule_results=parsed_inputs,
+                outputs=parsed_outputs,
+                final_result=final_result,
+                input_expressions=self.inputs.rows,
+                output_expressions=self.outputs.rows,
+                input_col_ids=self.inputs.col_ids,
+                output_col_ids=self.outputs.col_ids
+            )
+        
         return final_result
 
     @root_validator(skip_on_failure=True)
