@@ -3,7 +3,7 @@ import re
 from enum import Enum
 from typing import List, Union
 
-from pydantic import BaseModel, root_validator
+from pydantic import BaseModel, model_validator
 
 from bkflow_feel.api import parse_expression
 
@@ -35,12 +35,12 @@ class DataTable(BaseModel):
     cols: List[DataTableField]
     rows: List[Union[List[str], str]]
 
-    @root_validator(skip_on_failure=True)
-    def validate_length(cls, values: dict):
-        for row in values["rows"]:
-            if isinstance(row, list) and len(row) != len(values["cols"]):
+    @model_validator(mode="after")
+    def validate_length(self):
+        for row in self.rows:
+            if isinstance(row, list) and len(row) != len(self.cols):
                 raise ValueError("the length of row should be the same as the length of cols")
-        return values
+        return self
 
     @property
     def col_ids(self):
@@ -98,11 +98,11 @@ class SingleDecisionTable(BaseModel):
         
         return final_result
 
-    @root_validator(skip_on_failure=True)
-    def validate_length(cls, values: dict):
-        if len(values["inputs"].rows) != len(values["outputs"].rows):
+    @model_validator(mode="after")
+    def validate_length(self):
+        if len(self.inputs.rows) != len(self.outputs.rows):
             raise ValueError("the length of inputs should be the same as the length of outputs")
-        return values
+        return self
 
     @property
     def hit_policy_value(self):
